@@ -33,6 +33,7 @@ class TxCharacteristic(Characteristic):
                                 ['notify'], service)
         self.notifying = False
         GLib.io_add_watch(sys.stdin, GLib.IO_IN, self.on_console_input)
+        GLib.io_add_watch(uart.fileno(), GLib.IO_IN, self.read_from_uart)
 
     def on_console_input(self, fd, condition):
         s = fd.readline()
@@ -49,6 +50,12 @@ class TxCharacteristic(Characteristic):
         for c in s:
             value.append(dbus.Byte(c.encode()))
         self.PropertiesChanged(GATT_CHRC_IFACE, {'Value': value}, [])
+        
+    def read_from_uart(self):
+        data = uart.read(uart.inWaiting())
+        if data:
+            self.send_tx(data.decode())
+        return True
 
     def StartNotify(self):
         if self.notifying:
