@@ -175,7 +175,7 @@ class Android:
         :param endpoint_in:
         :return:
         """
-        running = True
+        global running
         while running:
             try:
                 data = endpoint_in.read(1024, timeout=1000)  # Read up to 1024 bytes with a timeout
@@ -204,7 +204,7 @@ class Android:
         :return:
         """
         
-        running = True
+        global running
         while running:
             while in_sock.getsockopt(zmq.EVENTS):
                 try:
@@ -229,8 +229,10 @@ class Android:
 
 def main():
     android = Android()
+    global running
     
     while True:
+        running = True
         print("\n--------------------\n........ Searching for device as USB...")
         accessory = android.identify_android_device_as_usb()
         if accessory:
