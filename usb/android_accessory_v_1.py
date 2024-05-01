@@ -78,6 +78,9 @@ def read_from_uart():
                 # print("Received data from UART:", data)
         except serial.SerialException as e:
             print(f"Serial exception: {e}")
+        except KeyboardInterrupt:
+            print("Keyboard interrupt received in read_from_uart thread.")
+            break
         except Exception as e:
             print(f"Unexpected error: {e}")
             
@@ -96,6 +99,9 @@ def send_messages_from_queue():
             print(f"Serial exception during write: {e}. Waiting for reconnection...")
             # Wait a bit for the read thread to re-establish the connection
             time.sleep(2)
+        except KeyboardInterrupt:
+            print("Keyboard interrupt received in read_from_uart thread.")
+            break
         except Exception as e:
             print(f"Unexpected error during write: {e}")
         
@@ -295,49 +301,57 @@ def main():
     send_uart_thread.start()
     monitor_thread.start()
 
-    while True:
-        running = True
-        print("\n--------------------\nSoftware Version: 3.7 ........ Searching for device as USB...")
-        accessory = identify_android_device_as_usb()
-        if accessory:
-            print("Device found and switched to accessory mode.")
-            try:
+    try:
+        while True:
+            running = True
+            print("\n--------------------\nSoftware Version: 3.7 ........ Searching for device as USB...")
+            accessory = identify_android_device_as_usb()
+            if accessory:
+                print("Device found and switched to accessory mode.")
+                try:
+                    
+                    print("Step 1 done")
+                    # Get endpoints based on product ID
+                    if accessory.idProduct == 0x2D00:
+                        endpoint_in, endpoint_out = get_bulk_endpoints(accessory, 0)
+                    elif accessory.idProduct == 0x2D01:
+                        # Standard communication endpoints
+                        endpoint_in, endpoint_out = get_bulk_endpoints(accessory, 0)
+                        # ADB communication endpoints (if needed)
+                        # adb_ep_in, adb_ep_out = get_bulk_endpoints(accessory, 1)
+
+                    print("Step 2 done")
+
+                    if endpoint_in is not None and endpoint_out is not None:
+                        read_thread = threading.Thread(target=read_from_accessory, args=(accessory, endpoint_in))
+                        write_thread = threading.Thread(target=write_to_accessory, args=(accessory, endpoint_out))
+
+                        read_thread.start()
+                        write_thread.start()
+                        print("Threads started")
+
+                        read_thread.join()
+                        write_thread.join()
+
+                        print("Continue Main loop after finish")
+                    else:
+                        print("Endpoints not found.")
+                except usb.core.USBError as e:
+                    print("Error setting configuration:", e)
+                    traceback_str = ''.join(traceback.format_tb(e.__traceback__))
+                    print("Traceback:", traceback_str)
+                    usb.util.dispose_resources(accessory)
+            else:
+                print("No Android device found in accessory mode.")
                 
-                print("Step 1 done")
-                # Get endpoints based on product ID
-                if accessory.idProduct == 0x2D00:
-                    endpoint_in, endpoint_out = get_bulk_endpoints(accessory, 0)
-                elif accessory.idProduct == 0x2D01:
-                    # Standard communication endpoints
-                    endpoint_in, endpoint_out = get_bulk_endpoints(accessory, 0)
-                    # ADB communication endpoints (if needed)
-                    # adb_ep_in, adb_ep_out = get_bulk_endpoints(accessory, 1)
-
-                print("Step 2 done")
-
-                if endpoint_in is not None and endpoint_out is not None:
-                    read_thread = threading.Thread(target=read_from_accessory, args=(accessory, endpoint_in))
-                    write_thread = threading.Thread(target=write_to_accessory, args=(accessory, endpoint_out))
-
-                    read_thread.start()
-                    write_thread.start()
-                    print("Threads started")
-
-                    read_thread.join()
-                    write_thread.join()
-
-                    print("Continue Main loop after finish")
-                else:
-                    print("Endpoints not found.")
-            except usb.core.USBError as e:
-                print("Error setting configuration:", e)
-                traceback_str = ''.join(traceback.format_tb(e.__traceback__))
-                print("Traceback:", traceback_str)
-                usb.util.dispose_resources(accessory)
-        else:
-            print("No Android device found in accessory mode.")
-            
-        time.sleep(3)  # Wait for 3 seconds before searching again
+            time.sleep(3)  # Wait for 3 seconds before searching again
+    except KeyboardInterrupt:
+        print("Keyboard interrupt received. Stopping threads...")
+        running = False
+        read_uart_thread.join()
+        send_uart_thread.join()
+        monitor_thread.join()
+        print("Threads stopped. Exiting.")
 
 if __name__ == "__main__":
     main()
