@@ -289,11 +289,11 @@ def main():
     # Create and start threads
     read_uart_thread = threading.Thread(target=read_from_uart)
     send_uart_thread = threading.Thread(target=send_messages_from_queue)
-    monitor_thread = threading.Thread(target=monitor_threads)
+    # monitor_thread = threading.Thread(target=monitor_threads)
 
     read_uart_thread.start()
     send_uart_thread.start()
-    monitor_thread.start()
+    # monitor_thread.start()
 
     while True:
         running = True
