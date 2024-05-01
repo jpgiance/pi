@@ -24,7 +24,7 @@ class UartServer:
         self.out_skt = ctx.socket(zmq.PUB)
         self.out_skt.bind("tcp://*:5556")
 
-        self.uart = serial.Serial(port, 9600)
+        self.uart = serial.Serial(port, 115200)
 
     def run(self):
         while True:
