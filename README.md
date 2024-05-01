@@ -12,7 +12,10 @@ Install instructions for the Raspberry Pi using Raspbian(Bullseye)
 4. sudo apt install python3-pip
 5. sudo apt install python3-dbus
 6. sudo apt install python3-serial
-7. sudo raspi-config
+7. sudo apt install libzmq3-dev
+8. sudo apt install python3-zmq
+9. sudo apt install python3-usb
+10. sudo raspi-config
    1. select interface options
    2. select Serial Port
    3. Would you like a login shell to be accessible over serial? No

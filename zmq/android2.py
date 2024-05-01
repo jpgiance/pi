@@ -2,6 +2,7 @@ import zmq
 import time
 import usb.core
 import usb.util
+import threading
 
 
 #  Product IDs / Vendor IDs
@@ -177,6 +178,8 @@ class Android:
         while running:
             try:
                 data = endpoint_in.read(1024, timeout=1000)  # Read up to 1024 bytes with a timeout
+                data_string = data.tobytes().decode('utf-8', errors='replace')
+                print("Received data from USB:", data_string)
                 out_sock.send(data)
 
             except usb.core.USBError as e:
@@ -193,50 +196,78 @@ class Android:
                 break
 
     @staticmethod
-    def write_to_accessory(endpoint_out, data):
+    def write_to_accessory(endpoint_out):
         """
         Write data back
         :param endpoint_out:
-        :param data:
         :return:
         """
-        try:
-            data = in_sock.recv()
-            endpoint_out.write(data)
-            print("Sending data to USB:", data)
-        except usb.core.USBError as e:
-            if e.errno == 110:  # errno 110 is a timeout error
-                print("Read timeout occurred. Handling it.")
-            else:
-                print("Device disconnected or read error:", e)
-
-        except Exception as e:
-            print("Unexpected error:", e)
+        
+        running = True
+        while running:
+            while in_sock.getsockopt(zmq.EVENTS):
+                try:
+                    data = in_sock.recv(flags=zmq.NOBLOCK)      # Don't block or it can hold up all the code
+                except usb.core.USBError as e:
+                    if e.errno == 110:  # errno 110 is a timeout error
+                        print("Read timeout occurred. Handling it.")
+                    else:
+                        print("Device disconnected or read error:", e)
+                        running = False  # Stop the threads
+                        break
+                except Exception as e:
+                    print("Unexpected error:", e)
+                    running = False  # Stop the threads
+                    break
+                else:
+                    if data:
+                        endpoint_out.write(data)
+                        print("Sending data to USB:", data)
 
 
 def main():
     android = Android()
-    accessory = android.identify_android_device_as_usb()
-    if accessory:
-        print("Device found and switched to accessory mode.")
-        try:
+    
+    while True:
+        print("\n--------------------\n........ Searching for device as USB...")
+        accessory = android.identify_android_device_as_usb()
+        if accessory:
+            print("Device found and switched to accessory mode.")
+            try:
 
-            print("Step 1 done")
-            # Get endpoints based on product ID
-            if accessory.idProduct == 0x2D00:
-                endpoint_in, endpoint_out = android.get_bulk_endpoints(accessory, 0)
-            elif accessory.idProduct == 0x2D01:
-                # Standard communication endpoints
-                endpoint_in, endpoint_out = android.get_bulk_endpoints(accessory, 0)
-                # ADB communication endpoints (if needed)
-                # adb_ep_in, adb_ep_out = get_bulk_endpoints(accessory, 1)
-            print("Step 2 done")
+                print("Step 1 done")
+                # Get endpoints based on product ID
+                if accessory.idProduct == 0x2D00:
+                    endpoint_in, endpoint_out = android.get_bulk_endpoints(accessory, 0)
+                elif accessory.idProduct == 0x2D01:
+                    # Standard communication endpoints
+                    endpoint_in, endpoint_out = android.get_bulk_endpoints(accessory, 0)
+                    # ADB communication endpoints (if needed)
+                    # adb_ep_in, adb_ep_out = get_bulk_endpoints(accessory, 1)
+                print("Step 2 done")
+                
+                if endpoint_in is not None and endpoint_out is not None:
+                    read_thread = threading.Thread(target=android.read_from_accessory, args=(endpoint_in,))
+                    write_thread = threading.Thread(target=android.write_to_accessory, args=(endpoint_out,))
 
-        except usb.core.USBError as e:
-            print("Error setting configuration:", e)
-            usb.util.dispose_resources(accessory)
-    else:
-        print("No Android device found in accessory mode.")
+                    read_thread.start()
+                    write_thread.start()
+                    print("Threads started")
+
+                    read_thread.join()
+                    write_thread.join()
+
+                    print("Continue Main loop after finish")
+                else:
+                    print("Endpoints not found.")
+
+            except usb.core.USBError as e:
+                print("Error setting configuration:", e)
+                usb.util.dispose_resources(accessory)
+        else:
+            print("No Android device found in accessory mode.")
+            
+        time.sleep(3)  # Wait for 3 seconds before searching again
 
 
 if __name__ == "__main__":
