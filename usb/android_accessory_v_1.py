@@ -237,7 +237,7 @@ def read_from_accessory(device, endpoint_in):
             message_queue_to_uart.put(data.tobytes())  # Enqueue the received data
         except usb.core.USBError as e:
             if e.errno == 110:
-                print("Read timeout. Continuing...")
+                # print("Read timeout. Continuing...")
                 continue
             else:
                 print("Read thread USB error:", e)
