@@ -76,12 +76,12 @@ class Android:
                 return False
 
             # Step 2: Send identifying strings
-            self.send_string(self.device, 0, manufacturer)
-            self.send_string(self.device, 1, model)
-            self.send_string(self.device, 2, description)
-            self.send_string(self.device, 3, version)
-            self.send_string(self.device, 4, uri)
-            self.send_string(self.device, 5, serial)
+            self.send_string( 0, manufacturer)
+            self.send_string( 1, model)
+            self.send_string( 2, description)
+            self.send_string( 3, version)
+            self.send_string( 4, uri)
+            self.send_string( 5, serial)
 
             # Step 3: Start accessory mode
             self.device.ctrl_transfer(
@@ -100,7 +100,7 @@ class Android:
     def attempt_accessory_mode_for_device(self):
         try:
             # Send accessory mode commands and check if successful
-            if self.send_accessory_mode_commands(self.device):
+            if self.send_accessory_mode_commands():
                 # Wait for the device to disconnect and reconnect
                 print("Waiting for device to switch to accessory mode...")
                 time.sleep(1)
