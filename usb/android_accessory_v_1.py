@@ -259,7 +259,7 @@ def write_to_accessory(device, endpoint_out):
                 print("Sending data to USB:", data)
             except usb.core.USBError as e:
                 if e.errno == 110:  # errno 110 is a timeout error
-                    print("Read timeout occurred. Handling it.")
+                    # print("Read timeout occurred. Handling it.")
                     continue
                 else:
                     print("Device disconnected or read error:", e)
