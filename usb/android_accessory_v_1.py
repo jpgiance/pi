@@ -10,7 +10,7 @@ import traceback
 import serial
 
 # Configure these values based on your setup
-arduino_port = '/dev/serial0'  # UART port for Raspberry Pi
+arduino_port = '/dev/ttyS0'  # UART port for Raspberry Pi
 baud_rate = 115200             # Match this with your Arduino's baud rate
 last_uart_activity = time.time()
 # Setup the serial connection
