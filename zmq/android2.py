@@ -127,9 +127,10 @@ class Android:
 
             # Iterate over all connected USB devices
             for dev in devices:
+                self.device = dev
                 description = usb.util.get_string(dev, dev.iProduct)
                 print("checking device: ", description)
-                accessory_dev = self.attempt_accessory_mode_for_device(dev)
+                accessory_dev = self.attempt_accessory_mode_for_device()
                 if accessory_dev is not None:
                     return accessory_dev  # Return the device already in accessory mode
             return None
@@ -184,7 +185,7 @@ class Android:
 
             except usb.core.USBError as e:
                 if e.errno == 110:
-                    print("Read timeout. Continuing...")
+                    # print("Read timeout. Continuing...")
                     continue
                 else:
                     print("Read thread USB error:", e)
@@ -210,7 +211,8 @@ class Android:
                     data = in_sock.recv(flags=zmq.NOBLOCK)      # Don't block or it can hold up all the code
                 except usb.core.USBError as e:
                     if e.errno == 110:  # errno 110 is a timeout error
-                        print("Read timeout occurred. Handling it.")
+                        # print("Read timeout occurred. Handling it.")
+                        continue
                     else:
                         print("Device disconnected or read error:", e)
                         running = False  # Stop the threads
