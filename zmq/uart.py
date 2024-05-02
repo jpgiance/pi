@@ -18,7 +18,7 @@ class UartServer:
         """
         ctx = zmq.Context()
         self.in_skt = ctx.socket(zmq.SUB)
-        self.in_skt.connect("tcp://localhost:5555")
+        self.in_skt.bind("tcp://*:5555")
         self.in_skt.setsockopt_string(zmq.SUBSCRIBE, "")
 
         self.out_skt = ctx.socket(zmq.PUB)
