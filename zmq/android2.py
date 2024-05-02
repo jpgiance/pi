@@ -26,7 +26,7 @@ in_sock.setsockopt_string(zmq.SUBSCRIBE, "")
 
 # Server Code that connects to the UartServers subscriber (sends to the uart)
 out_sock = context.socket(zmq.PUB)
-out_sock.bind("tcp://*:5555")
+out_sock.connect("tcp://localhost:5555")
 
 
 class Android:
