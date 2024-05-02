@@ -2,13 +2,13 @@ import subprocess
 import time
 
 def start_uart_server():
-    subprocess.Popen(["python", "uart.py"])
+    subprocess.Popen(["python", "/home/pi/Dev/pi/zmq/uart.py"])
 
 def start_usb_host_process():
-    subprocess.Popen(["python", "android2.py"])
+    subprocess.Popen(["python", "/home/pi/Dev/pi/zmq/android2.py"])
 
 def start_bluetoothLE_process():
-    subprocess.Popen(["python", "bluetooth2.py"])
+    subprocess.Popen(["python", "/home/pi/Dev/pi/zmq/bluetooth2.py"])
 
 
 # Start the components in the desired order

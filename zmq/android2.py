@@ -57,11 +57,11 @@ class Android:
         These strings should be replaced with your specific values
         :return:
         """
-        manufacturer = 'Manufacturer'
-        model = 'Model'
-        description = 'Description'
+        manufacturer = 'GoFabCNC'
+        model = 'Plasma Table'
+        description = 'GoFabCNC Plasma Table'
         version = '1.0'
-        uri = 'https://example.com'
+        uri = 'https://gofabcnc.com'
         serial = 'serial'
 
         try:
