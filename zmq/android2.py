@@ -1,5 +1,6 @@
 import zmq
 import time
+import logging
 import usb.core
 import usb.util
 import threading
@@ -16,6 +17,9 @@ AOA_ACCESSORY_AUDIO_ADB_PRODUCT_ID  = 0x2D05  # accessory + audio + adb
 
 GOOGLE_VID = 0x18D1
 ACCESSORY_PIDS = {0x2D00, 0x2D01}  # Accessory mode product IDs
+
+logging.basicConfig(level=logging.DEBUG)
+log = logging.getLogger("usb_host")
 
 context = zmq.Context()
 
@@ -72,7 +76,7 @@ class Android:
             # Check protocol support
             protocol_version = int.from_bytes(protocol, byteorder='little')
             if protocol_version == 0:
-                print('Accessory mode not supported')
+                log.info('Accessory mode not supported')
                 return False
 
             # Step 2: Send identifying strings
@@ -91,10 +95,10 @@ class Android:
                 wIndex=0,
                 data_or_wLength=None
             )
-            print("Switched to accessory mode")
+            log.info("Switched to accessory mode")
             return True
         except Exception as e:
-            print("Failed to send accessory mode commands:", e)
+            log.error("Failed to send accessory mode commands:{}".format(e))
             return False
 
     def attempt_accessory_mode_for_device(self):
@@ -102,20 +106,20 @@ class Android:
             # Send accessory mode commands and check if successful
             if self.send_accessory_mode_commands():
                 # Wait for the device to disconnect and reconnect
-                print("Waiting for device to switch to accessory mode...")
+                log.info("Waiting for device to switch to accessory mode...")
                 time.sleep(1)
                 accessory = self.find_accessory_device()
                 if accessory is not None:
-                    print("Device found in accessory mode:", accessory)
+                    log.info("Device found in accessory mode: {}".format(accessory))
                     return accessory  # Return the device if accessory mode command was successful
                 else:
-                    print("Device not found in accessory mode.")
+                    log.info("Device not found in accessory mode.")
                     return None
 
             else:
                 return None
         except Exception as e:
-            print("Error attempting accessory mode:", e)
+            log.error("Error attempting accessory mode:{}".format(e))
             return None
 
     def identify_android_device_as_usb(self):
@@ -129,7 +133,7 @@ class Android:
             for dev in devices:
                 self.device = dev
                 description = usb.util.get_string(dev, dev.iProduct)
-                print("checking device: ", description)
+                log.info("checking device: {}".format(description))
                 accessory_dev = self.attempt_accessory_mode_for_device()
                 if accessory_dev is not None:
                     return accessory_dev  # Return the device already in accessory mode
@@ -137,7 +141,7 @@ class Android:
         except usb.core.USBError as e:
             return None
         except Exception as e:
-            print("Error attempting accessory mode:", e)
+            log.error("Error attempting accessory mode:{}".format(e))
             return None
 
     @staticmethod
@@ -149,6 +153,7 @@ class Android:
                     return d
             return None
         except usb.core.USBError as e:
+            log.error("Error while find_accessory_device:{}".format(e))
             return None
 
     @staticmethod
@@ -180,19 +185,19 @@ class Android:
             try:
                 data = endpoint_in.read(1024, timeout=1000)  # Read up to 1024 bytes with a timeout
                 data_string = data.tobytes().decode('utf-8', errors='replace')
-                print("Received data from USB:", data_string)
+                log.info("Received data from USB:{}".format(data_string))
                 out_sock.send(data)
 
             except usb.core.USBError as e:
                 if e.errno == 110:
-                    # print("Read timeout. Continuing...")
+                    # log.info("Read timeout. Continuing...")
                     continue
                 else:
-                    print("Read thread USB error:", e)
+                    log.error("Read thread USB error:{}".format(e))
                     running = False  # Stop the threads
                     break
             except Exception as e:
-                print("Read thread unexpected error:", e)
+                log.error("Read thread unexpected error:{}".format(e))
                 running = False  # Stop the threads
                 break
 
@@ -211,20 +216,20 @@ class Android:
                     data = in_sock.recv(flags=zmq.NOBLOCK)      # Don't block or it can hold up all the code
                 except usb.core.USBError as e:
                     if e.errno == 110:  # errno 110 is a timeout error
-                        # print("Read timeout occurred. Handling it.")
+                        # log.info("Read timeout occurred. Handling it.")
                         continue
                     else:
-                        print("Device disconnected or read error:", e)
+                        log.error("Device disconnected or read error:{}".format(e))
                         running = False  # Stop the threads
                         break
                 except Exception as e:
-                    print("Unexpected error:", e)
+                    log.error("Unexpected error:{}".format(e))
                     running = False  # Stop the threads
                     break
                 else:
                     if data:
                         endpoint_out.write(data)
-                        print("Sending data to USB:", data)
+                        log.info("Sending data to USB:{}".format(data))
 
 
 def main():
@@ -233,13 +238,13 @@ def main():
     
     while True:
         running = True
-        print("\n--------------------\n........ Searching for device as USB...")
+        log.info("\n--------------------\n........ Searching for device as USB...")
         accessory = android.identify_android_device_as_usb()
         if accessory:
-            print("Device found and switched to accessory mode.")
+            log.info("Device found and switched to accessory mode.")
             try:
 
-                print("Step 1 done")
+                log.info("Step 1 done")
                 # Get endpoints based on product ID
                 if accessory.idProduct == 0x2D00:
                     endpoint_in, endpoint_out = android.get_bulk_endpoints(accessory, 0)
@@ -248,7 +253,7 @@ def main():
                     endpoint_in, endpoint_out = android.get_bulk_endpoints(accessory, 0)
                     # ADB communication endpoints (if needed)
                     # adb_ep_in, adb_ep_out = get_bulk_endpoints(accessory, 1)
-                print("Step 2 done")
+                log.info("Step 2 done")
                 
                 if endpoint_in is not None and endpoint_out is not None:
                     read_thread = threading.Thread(target=android.read_from_accessory, args=(endpoint_in,))
@@ -256,20 +261,20 @@ def main():
 
                     read_thread.start()
                     write_thread.start()
-                    print("Threads started")
+                    log.info("Threads started")
 
                     read_thread.join()
                     write_thread.join()
 
-                    print("Continue Main loop after finish")
+                    log.info("Continue Main loop after finish")
                 else:
-                    print("Endpoints not found.")
+                    log.info("Endpoints not found.")
 
             except usb.core.USBError as e:
-                print("Error setting configuration:", e)
+                log.error("Error setting configuration:{}".format(e))
                 usb.util.dispose_resources(accessory)
         else:
-            print("No Android device found in accessory mode.")
+            log.info("No Android device found in accessory mode.")
             
         time.sleep(3)  # Wait for 3 seconds before searching again
 
