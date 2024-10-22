@@ -231,10 +231,15 @@ def read_from_accessory(device, endpoint_in):
         try:
             data = endpoint_in.read(1024, timeout=1000)  # Read up to 1024 bytes with a timeout
             data_string = data.tobytes().decode('utf-8', errors='replace')
-            # print("Received data from USB:", data_string)
-            if(message_queue_to_uart.qsize() > MAX_QUEUE_SIZE):
-                    clear_queue(message_queue_to_uart)
-            message_queue_to_uart.put(data.tobytes())  # Enqueue the received data
+            print("Received data from USB:", data_string)
+            
+            # if(message_queue_to_uart.qsize() > MAX_QUEUE_SIZE):
+            #         clear_queue(message_queue_to_uart)
+            # message_queue_to_uart.put(data.tobytes())  # Enqueue the received data
+            
+            if(message_queue_to_usb.qsize() > MAX_QUEUE_SIZE):
+                    clear_queue(message_queue_to_usb)
+            message_queue_to_usb.put(data.tobytes())  # Enqueue echo data
         except usb.core.USBError as e:
             if e.errno == 110:
                 # print("Read timeout. Continuing...")
