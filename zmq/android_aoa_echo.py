@@ -186,7 +186,8 @@ class Android:
                 data = endpoint_in.read(1024, timeout=1000)  # Read up to 1024 bytes with a timeout
                 data_string = data.tobytes().decode('utf-8', errors='replace')
                 log.info("Received data from USB:{}".format(data_string))
-                out_sock.send(data)
+                # out_sock.send(data)
+                in_sock.send(data)
 
             except usb.core.USBError as e:
                 if e.errno == 110:
